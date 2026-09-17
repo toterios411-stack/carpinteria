@@ -1,5 +1,4 @@
 import unittest
-import os
 import database
 
 class TestDatabase(unittest.TestCase):
@@ -7,6 +6,14 @@ class TestDatabase(unittest.TestCase):
     def setUp(self):
         """Inicializa la base de datos antes de cada prueba."""
         database.inicializar_bd()
+
+    def tearDown(self):
+        """Limpia el usuario de prueba creado para evitar el error de duplicado."""
+        conn = database.obtener_conexion()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM usuarios WHERE usuario = ?", ("usuario_prueba",))
+        conn.commit()
+        conn.close()
 
     def test_validar_login_correcto(self):
         """Prueba la validación con credenciales correctas."""
