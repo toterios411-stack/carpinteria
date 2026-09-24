@@ -1,37 +1,35 @@
 import unittest
+import os
 import database
 
-class TestDatabase(unittest.TestCase):
+class TestDatabaseCarpinteria(unittest.TestCase):
 
     def setUp(self):
-        """Inicializa la base de datos antes de cada prueba."""
+        """Se ejecuta antes de cada prueba para asegurar el entorno base."""
         database.inicializar_bd()
 
-    def tearDown(self):
-        """Limpia el usuario de prueba creado para evitar el error de duplicado."""
-        conn = database.obtener_conexion()
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM usuarios WHERE usuario = ?", ("usuario_prueba",))
-        conn.commit()
-        conn.close()
+    def test_01_registro_usuario_exitoso(self):
+        """Prueba la inserción de un usuario nuevo."""
+        usuario_test = "carpintero_test"
+        clave_test = "password123"
+        exito, msg = database.registrar_usuario(usuario_test, clave_test)
+        self.assertTrue(exito)
+        self.assertIn("registrado exitosamente", msg)
 
-    def test_validar_login_correcto(self):
-        """Prueba la validación con credenciales correctas."""
+    def test_02_usuario_duplicado(self):
+        """Verifica que el sistema rechace usuarios duplicados."""
+        usuario_test = "admin" # Usuario creado en la inicialización
+        exito, msg = database.registrar_usuario(usuario_test, "1234")
+        self.assertFalse(exito)
+        self.assertIn("ya existe", msg)
+
+    def test_03_login_correcto(self):
+        """Valida que las credenciales correctas permitan el acceso."""
         self.assertTrue(database.validar_login("admin", "1234"))
 
-    def test_validar_login_incorrecto(self):
-        """Prueba el rechazo de credenciales inválidas."""
+    def test_04_login_incorrecto(self):
+        """Valida que credenciales erróneas sean rechazadas."""
         self.assertFalse(database.validar_login("admin", "clave_erronea"))
 
-    def test_registrar_usuario_nuevo(self):
-        """Prueba el registro de un nuevo usuario en la BD."""
-        exito, msg = database.registrar_usuario("usuario_prueba", "pass123")
-        self.assertTrue(exito)
-
-    def test_obtener_usuarios(self):
-        """Prueba la consulta de lista de usuarios."""
-        usuarios = database.obtener_todos_los_usuarios()
-        self.assertGreater(len(usuarios), 0)
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

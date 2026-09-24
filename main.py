@@ -1,4 +1,4 @@
-import login  # Importa la lógica del archivo login.py
+import login
 
-if __name__ == "__main__":  # Comprueba que el archivo se ejecute directamente
-    login.iniciar_interfaz()  # Arranca el sistema mostrando el Login
+if __name__ == "__main__":
+    login.iniciar_app()

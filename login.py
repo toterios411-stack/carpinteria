@@ -1,66 +1,104 @@
-import tkinter as tk  # Librería para la interfaz gráfica (GUI)
-from tkinter import messagebox  # Módulo para cuadros emergentes
-import database  # Importa las funciones de la base de datos
-from menu_principal import abrir_menu_principal  # Importa la ventana del Menú Principal
+import tkinter as tk
+from tkinter import messagebox
+import database
+from menu_principal import abrir_menu_principal
 
-def intentar_login():
-    usuario = entry_usuario.get()  # Lee el texto ingresado en el campo Usuario
-    clave = entry_clave.get()  # Lee el texto ingresado en el campo Contraseña
-    
-    if database.validar_login(usuario, clave):  # Consulta las credenciales en la BD
-        messagebox.showinfo("Éxito", "¡Inicio de sesión correcto!")  # Muestra mensaje de éxito
-        abrir_menu_principal(usuario, root_login)  # Abre el Menú Principal
-    else:
-        messagebox.showerror("Error", "Usuario o contraseña incorrectos")  # Muestra mensaje de error
+class VentanaLogin:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Sistema de Carpintería - Login")
+        self.geometry = self.root.geometry("350x280")
+        self.root.resizable(False, False)
 
-def ventana_nuevo_usuario():
-    win_nuevo = tk.Toplevel(root_login)  # Crea una ventana secundaria emergente
-    win_nuevo.title("Nuevo Usuario")  # Título de la ventana emergente
-    win_nuevo.geometry("300x220")  # Dimensiones de la ventana
-    
-    tk.Label(win_nuevo, text="Crear Nueva Cuenta", font=("Arial", 11, "bold")).pack(pady=10)  # Encabezado
-    
-    tk.Label(win_nuevo, text="Nuevo Usuario:").pack()  # Etiqueta Usuario
-    entry_new_user = tk.Entry(win_nuevo)  # Campo para escribir nuevo usuario
-    entry_new_user.pack(pady=2)  # Posiciona la entrada
-    
-    tk.Label(win_nuevo, text="Contraseña:").pack()  # Etiqueta Contraseña
-    entry_new_pass = tk.Entry(win_nuevo, show="*")  # Campo para contraseña (oculta)
-    entry_new_pass.pack(pady=2)  # Posiciona la entrada
-    
-    def guardar():
-        u, p = entry_new_user.get(), entry_new_pass.get()  # Lee los datos ingresados
-        if u and p:  # Verifica que los campos no estén vacíos
-            exito, msg = database.registrar_usuario(u, p)  # Registra el usuario en la BD
-            if exito:
-                messagebox.showinfo("Éxito", msg, parent=win_nuevo)  # Alerta éxito
-                win_nuevo.destroy()  # Cierra la ventana emergente
-            else:
-                messagebox.showerror("Error", msg, parent=win_nuevo)  # Alerta error
-        else:
-            messagebox.showwarning("Advertencia", "Complete todos los campos", parent=win_nuevo)  # Alerta incompleto
+        # Título
+        tk.Label(root, text="Inicio de Sesión", font=("Arial", 14, "bold")).pack(pady=15)
+
+        # Formulario
+        frame = tk.Frame(root)
+        frame.pack(pady=10)
+
+        tk.Label(frame, text="Usuario:").grid(row=0, column=0, sticky="e", pady=5)
+        self.txt_usuario = tk.Entry(frame)
+        self.txt_usuario.grid(row=0, column=1, padx=5, pady=5)
+
+        tk.Label(frame, text="Contraseña:").grid(row=1, column=0, sticky="e", pady=5)
+        self.txt_clave = tk.Entry(frame, show="*")
+        self.txt_clave.grid(row=1, column=1, padx=5, pady=5)
+
+        # Botones
+        btn_frame = tk.Frame(root)
+        btn_frame.pack(pady=15)
+
+        tk.Button(btn_frame, text="Ingresar", bg="#27AE60", fg="white", font=("Arial", 10, "bold"), command=self.validar_ingreso).pack(side=tk.LEFT, padx=5)
+        tk.Button(btn_frame, text="Registrarse", bg="#2980B9", fg="white", font=("Arial", 10, "bold"), command=self.abrir_registro).pack(side=tk.LEFT, padx=5)
+
+    def validar_ingreso(self):
+        usuario = self.txt_usuario.get().strip()
+        clave = self.txt_clave.get().strip()
+
+        if not usuario or not clave:
+            messagebox.showwarning("Atención", "Por favor complete todos los campos.")
+            return
+
+        if database.validar_login(usuario, clave):
+            messagebox.showinfo("Bienvenido", f"¡Acceso correcto! Bienvenido {usuario}.")
             
-    tk.Button(win_nuevo, text="Guardar Usuario", command=guardar, bg="#3498db", fg="white").pack(pady=15)  # Botón guardar
+            # Limpia los campos
+            self.txt_usuario.delete(0, tk.END)
+            self.txt_clave.delete(0, tk.END)
+            
+            self.root.withdraw()  # Oculta la ventana de Login
+            
+            # Abre el Menú Principal
+            abrir_menu_principal(self.root)
+        else:
+            messagebox.showerror("Error", "Usuario o contraseña incorrectos.")
 
-def iniciar_interfaz():
-    global root_login, entry_usuario, entry_clave  # Variables globales
-    database.inicializar_bd()  # Inicializa la BD y crea las tablas si no existen
-    
-    root_login = tk.Tk()  # Crea la ventana principal de Login
-    root_login.title("Acceso al Sistema")  # Título de la ventana
-    root_login.geometry("320x280")  # Tamaño de la ventana
-    
-    tk.Label(root_login, text="Inicio de Sesión", font=("Arial", 12, "bold")).pack(pady=10)  # Título
-    
-    tk.Label(root_login, text="Usuario:").pack()  # Etiqueta Usuario
-    entry_usuario = tk.Entry(root_login)  # Campo de texto para Usuario
-    entry_usuario.pack(pady=2)  # Posiciona campo
-    
-    tk.Label(root_login, text="Contraseña:").pack()  # Etiqueta Contraseña
-    entry_clave = tk.Entry(root_login, show="*")  # Campo de texto para Contraseña
-    entry_clave.pack(pady=2)  # Posiciona campo
-    
-    tk.Button(root_login, text="Ingresar", command=intentar_login, bg="#2ecc71", fg="white", width=15).pack(pady=10)  # Botón Ingresar
-    tk.Button(root_login, text="Crear Nuevo Usuario", command=ventana_nuevo_usuario, bg="#3498db", fg="white", width=18).pack()  # Botón Registrar
-    
-    root_login.mainloop()  # Mantiene la ventana activa alineado dentro de iniciar_interfaz()
+    def abrir_registro(self):
+        VentanaRegistro(self.root)
+
+
+class VentanaRegistro(tk.Toplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.title("Registro de Usuario")
+        self.geometry("300x220")
+
+        tk.Label(self, text="Registrar Usuario", font=("Arial", 12, "bold")).pack(pady=10)
+
+        form = tk.Frame(self)
+        form.pack(pady=5)
+
+        tk.Label(form, text="Usuario:").grid(row=0, column=0, sticky="e", pady=5)
+        self.txt_nuevo_user = tk.Entry(form)
+        self.txt_nuevo_user.grid(row=0, column=1, padx=5, pady=5)
+
+        tk.Label(form, text="Contraseña:").grid(row=1, column=0, sticky="e", pady=5)
+        self.txt_nueva_clave = tk.Entry(form, show="*")
+        self.txt_nueva_clave.grid(row=1, column=1, padx=5, pady=5)
+
+        tk.Button(self, text="Guardar", bg="#27AE60", fg="white", command=self.guardar_usuario).pack(pady=10)
+
+    def guardar_usuario(self):
+        user = self.txt_nuevo_user.get().strip()
+        clave = self.txt_nueva_clave.get().strip()
+
+        if not user or not clave:
+            messagebox.showwarning("Atención", "Todos los campos son obligatorios.")
+            return
+
+        exito, msg = database.registrar_usuario(user, clave)
+        if exito:
+            messagebox.showinfo("Éxito", msg)
+            self.destroy()
+        else:
+            messagebox.showerror("Error", msg)
+
+
+def iniciar_app():
+    root = tk.Tk()
+    app = VentanaLogin(root)
+    root.mainloop()
+
+if __name__ == "__main__":
+    iniciar_app()
