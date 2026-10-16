@@ -1,0 +1,14 @@
+[33m69aad9a[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m Cierre exitoso del Sprint 2: Roles, Inventario, Tests y Doxyfile
+[33m791f9df[m PDO: Doxyfile configurado correctamente
+[33m9091a67[m[33m ([m[1;33mtag: [m[1;33mv2.0[m[33m, [m[1;33mtag: [m[1;33mv1.0[m[33m)[m ALC: Culminacion de Sprint 2 - Modulo Usuarios/Roles y Modulo Inventario
+[33m6174b33[m ALC: Documentacion completa del proyecto, DFD, DD, UML y pruebas automatizadas
+[33mb5bb745[m PDO: Se crea archivo README.md para cierre de Sprint 1
+[33ma6fa9ab[m PDO: Creacion de README.md y cierre de Sprint 1
+[33m56d3739[m PUN: Correccion de tearDown en pruebas unitarias
+[33md0b0387[m PUN: Implementacion de pruebas unitarias corregidas para modulo Login
+[33m3da59cb[m Sprint 1: Modulo Login completo con SQLite y Tkinter
+[33m98154c0[m Se agrega boton para cambiar contrasena desde la interfaz
+[33m9e09417[m Se agrega pantalla de login
+[33m9c51c54[m Se agrega pantalla de login conectada con config.txt
+[33m71d44e4[m Se agrego ventana de login personalizada y ajustes de UI
+[33mbf115d5[m Sistema carpinteria completo
