@@ -1,8 +1,0 @@
-PROJECT_NAME = "Sistema de Gestion para Carpinteria (SGC)"
-PROJECT_NUMBER = "v2.0"
-OUTPUT_DIRECTORY = "docs"
-INPUT = .
-RECURSIVE = YES
-FILE_PATTERNS = *.py
-GENERATE_HTML = YES
-GENERATE_LATEX = NO
