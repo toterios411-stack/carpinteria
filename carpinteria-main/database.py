@@ -36,19 +36,6 @@ def inicializar_bd():
         )
         """)
 
-        cursor.execute("""
-        CREATE TABLE IF NOT EXISTS materiales (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            codigo TEXT UNIQUE NOT NULL,
-            nombre TEXT NOT NULL,
-            tipo TEXT NOT NULL,
-            unidad_medida TEXT NOT NULL,
-            stock_actual REAL DEFAULT 0,
-            stock_minimo REAL DEFAULT 0,
-            precio_unitario REAL DEFAULT 0
-        )
-        """)
-
         pwd_admin = encriptar_password("1234")
         cursor.execute("""
         INSERT OR IGNORE INTO usuarios (usuario, clave, rol) 
@@ -58,6 +45,9 @@ def inicializar_bd():
         conn.commit()
     finally:
         conn.close()
+    
+    inicializar_tabla_muebles()
+    inicializar_tabla_pedidos()
 
 # --- MÓDULO: USUARIOS Y ROLES ---
 def validar_login_con_rol(usuario, clave):
@@ -150,8 +140,6 @@ def obtener_todos_los_clientes():
     finally:
         conn.close()
 
-
-
 def actualizar_cliente_por_id(cliente_id, ruc_cedula, nombre, telefono, direccion):
     conn = obtener_conexion()
     try:
@@ -186,6 +174,21 @@ def eliminar_cliente_por_id(cliente_id):
     finally:
         conn.close()
 
+def buscar_clientes(termino):
+    conn = obtener_conexion()
+    try:
+        cursor = conn.cursor()
+        termino_upper = termino.strip().upper()
+        cursor.execute("""
+            SELECT id, UPPER(nombre_razon_social), ruc_cedula, telefono, direccion 
+            FROM clientes 
+            WHERE UPPER(nombre_razon_social) LIKE ? OR ruc_cedula LIKE ?
+            ORDER BY id ASC
+        """, (f"%{termino_upper}%", f"%{termino_upper}%"))
+        return cursor.fetchall()
+    finally:
+        conn.close()
+
 # --- MÓDULO: PEDIDOS ---
 def inicializar_tabla_pedidos():
     conn = obtener_conexion()
@@ -202,12 +205,6 @@ def inicializar_tabla_pedidos():
             estado TEXT NOT NULL DEFAULT 'PENDIENTE'
         )
         """)
-        cursor.execute("PRAGMA table_info(pedidos)")
-        columnas = [col[1] for col in cursor.fetchall()]
-        if "ruc_cedula" not in columnas:
-            cursor.execute("ALTER TABLE pedidos ADD COLUMN ruc_cedula TEXT")
-        if "cantidad" not in columnas:
-            cursor.execute("ALTER TABLE pedidos ADD COLUMN cantidad INTEGER DEFAULT 1")
         conn.commit()
     finally:
         conn.close()
@@ -220,10 +217,9 @@ def registrar_pedido(cliente_nombre, ruc_cedula, trabajo, cantidad, plazo_dias):
         cli_mayus = cliente_nombre.upper()
         trab_mayus = trabajo.upper()
         
-        # Verificar estrictamente que el cliente exista antes de registrar el pedido
         cursor.execute("SELECT id FROM clientes WHERE ruc_cedula = ? OR UPPER(nombre_razon_social) = ?", (ruc_cedula, cli_mayus))
         if not cursor.fetchone():
-            return False, f"El cliente '{cli_mayus}' no está registrado en el sistema. Debe registrarlo primero en 'Gestión de Clientes'."
+            return False, f"El cliente '{cli_mayus}' no está registrado en el sistema."
 
         cursor.execute("""
         INSERT INTO pedidos (cliente, ruc_cedula, trabajo, cantidad, plazo_dias, estado)
@@ -246,39 +242,21 @@ def obtener_todos_los_pedidos():
     finally:
         conn.close()
 
-# --- MÓDULO: CLIENTES (Búsqueda Exacta) ---
-def buscar_clientes(termino):
-    conn = obtener_conexion()
-    try:
-        cursor = conn.cursor()
-        termino_upper = termino.strip().upper()
-        cursor.execute("""
-            SELECT id, UPPER(nombre_razon_social), ruc_cedula, telefono, direccion 
-            FROM clientes 
-            WHERE UPPER(nombre_razon_social) = ? OR ruc_cedula = ?
-            ORDER BY id ASC
-        """, (termino_upper, termino_upper))
-        return cursor.fetchall()
-    finally:
-        conn.close()
-
-# --- MÓDULO: PEDIDOS (Búsqueda Exacta) ---
 def buscar_pedidos(termino):
     inicializar_tabla_pedidos()
     conn = obtener_conexion()
     try:
         cursor = conn.cursor()
-        termino_upper = termino.strip().upper()
+        t = f"%{termino.strip().upper()}%"
         cursor.execute("""
             SELECT id, UPPER(cliente), ruc_cedula, UPPER(trabajo), cantidad, plazo_dias, UPPER(estado) 
             FROM pedidos 
-            WHERE UPPER(cliente) = ? OR ruc_cedula = ? OR UPPER(trabajo) = ?
+            WHERE UPPER(cliente) LIKE ? OR ruc_cedula LIKE ? OR UPPER(trabajo) LIKE ?
             ORDER BY id DESC
-        """, (termino_upper, termino_upper, termino_upper))
+        """, (t, t, t))
         return cursor.fetchall()
     finally:
         conn.close()
-
 
 def actualizar_pedido(pedido_id, trabajo, cantidad, plazo_dias, estado):
     conn = obtener_conexion()
@@ -308,7 +286,7 @@ def eliminar_pedido(pedido_id):
     finally:
         conn.close()
 
-# --- CATÁLOGOS DE MUEBLES ---
+# --- CATÁLOGOS DE MUEBLES CON PRECIOS ---
 def inicializar_tabla_muebles():
     conn = obtener_conexion()
     try:
@@ -316,18 +294,24 @@ def inicializar_tabla_muebles():
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS tipos_muebles (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            nombre TEXT UNIQUE NOT NULL
+            nombre TEXT UNIQUE NOT NULL,
+            precio REAL DEFAULT 0
         )
         """)
+        cursor.execute("PRAGMA table_info(tipos_muebles)")
+        columnas = [col[1] for col in cursor.fetchall()]
+        if "precio" not in columnas:
+            cursor.execute("ALTER TABLE tipos_muebles ADD COLUMN precio REAL DEFAULT 0")
+
         muebles_base = [
-            ("ROPERO DE 4 CUERPOS",),
-            ("ROPERO DE 3 CUERPOS",),
-            ("ROPERO DE 2 CUERPOS",),
-            ("ROPERO DE 1 CUERPO",),
-            ("JUEGO DE COMEDOR",),
-            ("PUERTA PLACA DE CEDRO",)
+            ("ROPERO DE 4 CUERPOS", 2200000),
+            ("ROPERO DE 3 CUERPOS", 1500000),
+            ("ROPERO DE 2 CUERPOS", 1100000),
+            ("ROPERO DE 1 CUERPO", 750000),
+            ("JUEGO DE COMEDOR", 2500000),
+            ("PUERTA PLACA DE CEDRO", 850000)
         ]
-        cursor.executemany("INSERT OR IGNORE INTO tipos_muebles (nombre) VALUES (?)", muebles_base)
+        cursor.executemany("INSERT OR IGNORE INTO tipos_muebles (nombre, precio) VALUES (?, ?)", muebles_base)
         conn.commit()
     finally:
         conn.close()
@@ -342,6 +326,74 @@ def obtener_tipos_muebles():
     finally:
         conn.close()
 
+def obtener_todos_los_muebles_con_precio():
+    inicializar_tabla_muebles()
+    conn = obtener_conexion()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, UPPER(nombre), precio FROM tipos_muebles ORDER BY nombre ASC")
+        return cursor.fetchall()
+    finally:
+        conn.close()
+
+def obtener_precio_mueble(nombre):
+    inicializar_tabla_muebles()
+    conn = obtener_conexion()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT precio FROM tipos_muebles WHERE UPPER(nombre) = ?", (nombre.strip().upper(),))
+        res = cursor.fetchone()
+        return res[0] if res and res[0] is not None else 0.0
+    finally:
+        conn.close()
+
+def registrar_mueble_con_precio(nombre, precio):
+    if not nombre or not nombre.strip():
+        return False, "El nombre del mueble es obligatorio."
+    inicializar_tabla_muebles()
+    conn = obtener_conexion()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO tipos_muebles (nombre, precio) VALUES (?, ?)", (nombre.strip().upper(), float(precio)))
+        conn.commit()
+        return True, "Mueble y precio registrados con éxito."
+    except sqlite3.IntegrityError:
+        return False, "Ese mueble ya existe en el catálogo."
+    except Exception as e:
+        return False, f"Error al registrar mueble: {str(e)}"
+    finally:
+        conn.close()
+
+def actualizar_mueble_con_precio(mueble_id, nombre, precio):
+    conn = obtener_conexion()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE tipos_muebles 
+            SET nombre = ?, precio = ?
+            WHERE id = ?
+        """, (nombre.strip().upper(), float(precio), mueble_id))
+        conn.commit()
+        return True, "Mueble y precio actualizados correctamente."
+    except sqlite3.IntegrityError:
+        return False, "Ya existe otro mueble con ese mismo nombre."
+    except Exception as e:
+        return False, f"Error al actualizar mueble: {str(e)}"
+    finally:
+        conn.close()
+
+def eliminar_mueble_por_id(mueble_id):
+    conn = obtener_conexion()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM tipos_muebles WHERE id = ?", (mueble_id,))
+        conn.commit()
+        return True, "Mueble eliminado del catálogo."
+    except Exception as e:
+        return False, f"Error al eliminar mueble: {str(e)}"
+    finally:
+        conn.close()
+
 def registrar_nuevo_mueble(nombre):
     if not nombre or not nombre.strip():
         return
@@ -350,29 +402,44 @@ def registrar_nuevo_mueble(nombre):
         conn = obtener_conexion()
         try:
             cursor = conn.cursor()
-            cursor.execute("INSERT OR IGNORE INTO tipos_muebles (nombre) VALUES (?)", (nombre.strip().upper(),))
+            cursor.execute("INSERT OR IGNORE INTO tipos_muebles (nombre, precio) VALUES (?, 0)", (nombre.strip().upper(),))
             conn.commit()
         finally:
             conn.close()
     except Exception:
         pass
 
-def eliminar_tipo_mueble(nombre):
+# --- REPORTES Y ESTADÍSTICAS ---
+def obtener_estadisticas_generales():
     conn = obtener_conexion()
     try:
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM tipos_muebles WHERE UPPER(nombre) = ?", (nombre.upper(),))
-        filas = cursor.rowcount
-        conn.commit()
-        if filas > 0:
-            return True, "Trabajo eliminado del catálogo correctamente."
-        return False, "No se encontró el trabajo en el catálogo."
-    except Exception as e:
-        return False, f"Error al eliminar del catálogo: {str(e)}"
+        cursor.execute("SELECT COUNT(*) FROM clientes")
+        total_clientes = cursor.fetchone()[0]
+
+        cursor.execute("SELECT COUNT(*) FROM pedidos")
+        total_pedidos = cursor.fetchone()[0]
+
+        cursor.execute("SELECT COUNT(*) FROM pedidos WHERE UPPER(estado) = 'TERMINADO'")
+        pedidos_terminados = cursor.fetchone()[0]
+
+        cursor.execute("SELECT COUNT(*) FROM pedidos WHERE UPPER(estado) = 'PENDIENTE'")
+        pedidos_pendientes = cursor.fetchone()[0]
+
+        cursor.execute("SELECT trabajo, cantidad FROM pedidos")
+        pedidos_lista = cursor.fetchall()
+        
+        ingreso_total = 0.0
+        for trabajo, cantidad in pedidos_lista:
+            precio = obtener_precio_mueble(trabajo)
+            ingreso_total += precio * cantidad
+
+        return {
+            "clientes": total_clientes,
+            "pedidos": total_pedidos,
+            "terminados": pedidos_terminados,
+            "pendientes": pedidos_pendientes,
+            "ingresos": ingreso_total
+        }
     finally:
         conn.close()
-
-registrar_pedido_cedro = registrar_pedido
-obtener_todos_los_pedidos_cedro = obtener_todos_los_pedidos
-actualizar_pedido_cedro = actualizar_pedido
-eliminar_pedido_cedro = eliminar_pedido
